@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.user import User, UserRole
 from app.models.job_card import JobCard
-from app.schemas.staff import StaffCreate, StaffUpdate, StaffResponse, PasswordChange, AdminPasswordReset
+from app.schemas.staff import StaffCreate, StaffUpdate, StaffResponse, PasswordChange, AdminPasswordReset, ProfileUpdate
 from app.schemas.base import PaginatedResponse
 from app.services.auth_service import AuthService
 from app.core.security import hash_password, verify_password
@@ -70,6 +70,17 @@ async def create_staff(data: StaffCreate, _: AdminUser, session: Annotated[Async
 async def get_my_profile(current_user: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
     return await _enrich(current_user, session)
 
+
+@router.patch("/me/profile", response_model=StaffResponse)
+async def update_my_profile(
+    data: ProfileUpdate,
+    current_user: CurrentUser,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    for key, value in data.model_dump(exclude_none=True).items():
+        setattr(current_user, key, value)
+    await session.flush()
+    return await _enrich(current_user, session)
 
 @router.get("/{staff_id}", response_model=StaffResponse)
 async def get_staff(staff_id: uuid.UUID, _: AdminUser, session: Annotated[AsyncSession, Depends(get_db)]):

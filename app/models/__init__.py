@@ -5,6 +5,7 @@ from app.models.job_card import JobCard, JobStatus
 from app.models.inventory import InventoryItem, Supplier
 from app.models.invoice import Invoice, GatePass, DayBookEntry, PaymentStatus, PaymentMethod
 from app.models.permission import StaffPermission, AVAILABLE_PERMISSIONS, MODULE_PERMISSIONS
+from app.models.activity_log import ActivityLog
 
 __all__ = [
     "User", "UserRole",
@@ -14,4 +15,5 @@ __all__ = [
     "InventoryItem", "Supplier",
     "Invoice", "GatePass", "DayBookEntry", "PaymentStatus", "PaymentMethod",
     "StaffPermission", "AVAILABLE_PERMISSIONS", "MODULE_PERMISSIONS",
+    "ActivityLog"
 ]

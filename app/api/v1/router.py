@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     auth, customers, vehicles, job_cards,
     invoices, daybook, inventory, gate_pass, pdf,
-    analytics, staff, permissions, suppliers,
+    analytics, staff, permissions, suppliers, activity_logs,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -19,3 +19,4 @@ api_router.include_router(pdf.router)
 api_router.include_router(analytics.router)
 api_router.include_router(staff.router)
 api_router.include_router(permissions.router)
+api_router.include_router(activity_logs.router)

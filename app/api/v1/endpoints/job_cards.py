@@ -1,20 +1,32 @@
 import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.job_card import JobStatus
-from app.schemas.job_card import JobCardCreate, JobCardUpdate, JobCardResponse, JobCardListItem, JobCardStatusUpdate
+from app.models.user import User, UserRole
+from app.schemas.job_card import (
+    JobCardCreate, JobCardUpdate, JobCardResponse,
+    JobCardListItem, JobCardStatusUpdate,
+)
 from app.schemas.base import PaginatedResponse
 from app.services.job_card_service import JobCardService
-from app.api.v1.dependencies.auth import CurrentUser
+from app.api.v1.dependencies.auth import require_permission, CurrentUser
+from app.schemas.staff import StaffResponse
 
 router = APIRouter(prefix="/job-cards", tags=["Job Cards"])
+
+ViewJob        = Annotated[User, Depends(require_permission("jobs.view"))]
+CreateJob      = Annotated[User, Depends(require_permission("jobs.create"))]
+EditJob        = Annotated[User, Depends(require_permission("jobs.edit"))]
+DeleteJob      = Annotated[User, Depends(require_permission("jobs.delete"))]
+ChangeStatus   = Annotated[User, Depends(require_permission("jobs.change_status"))]
 
 
 @router.get("", response_model=PaginatedResponse[JobCardListItem])
 async def list_jobs(
-    _: CurrentUser,
+    _: ViewJob,
     session: Annotated[AsyncSession, Depends(get_db)],
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -24,8 +36,42 @@ async def list_jobs(
     return await JobCardService(session).list(page, page_size, search, status)
 
 
+@router.get("/assignable-staff", response_model=list[StaffResponse])
+async def get_assignable_staff(
+    _: ViewJob,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Return all active staff members who can be assigned to jobs."""
+    from sqlalchemy import select, func
+    from app.models.job_card import JobCard
+
+    q = select(User).where(
+        User.deleted_at.is_(None),
+        User.is_active == True,
+    ).order_by(User.full_name)
+    users = list((await session.execute(q)).scalars().all())
+
+    result = []
+    for u in users:
+        count_q = select(func.count()).select_from(JobCard).where(
+            JobCard.assigned_to == u.id,
+            JobCard.deleted_at.is_(None),
+            JobCard.status.notin_([JobStatus.DELIVERED, JobStatus.CANCELLED]),
+        )
+        active_count = (await session.execute(count_q)).scalar_one()
+        from app.schemas.staff import StaffResponse
+        sr = StaffResponse.model_validate(u)
+        sr.job_count = active_count
+        result.append(sr)
+    return result
+
+
 @router.post("", response_model=JobCardResponse, status_code=201)
-async def create_job(data: JobCardCreate, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def create_job(
+    data: JobCardCreate,
+    _: CreateJob,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await JobCardService(session).create(data)
     except ValueError as e:
@@ -33,7 +79,11 @@ async def create_job(data: JobCardCreate, _: CurrentUser, session: Annotated[Asy
 
 
 @router.get("/{job_id}", response_model=JobCardResponse)
-async def get_job(job_id: uuid.UUID, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def get_job(
+    job_id: uuid.UUID,
+    _: ViewJob,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await JobCardService(session).get(job_id)
     except ValueError as e:
@@ -41,7 +91,12 @@ async def get_job(job_id: uuid.UUID, _: CurrentUser, session: Annotated[AsyncSes
 
 
 @router.patch("/{job_id}", response_model=JobCardResponse)
-async def update_job(job_id: uuid.UUID, data: JobCardUpdate, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def update_job(
+    job_id: uuid.UUID,
+    data: JobCardUpdate,
+    _: EditJob,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await JobCardService(session).update(job_id, data)
     except ValueError as e:
@@ -49,7 +104,12 @@ async def update_job(job_id: uuid.UUID, data: JobCardUpdate, _: CurrentUser, ses
 
 
 @router.patch("/{job_id}/status", response_model=JobCardResponse)
-async def update_status(job_id: uuid.UUID, data: JobCardStatusUpdate, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def update_status(
+    job_id: uuid.UUID,
+    data: JobCardStatusUpdate,
+    _: ChangeStatus,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await JobCardService(session).update_status(job_id, data)
     except ValueError as e:
@@ -57,7 +117,11 @@ async def update_status(job_id: uuid.UUID, data: JobCardStatusUpdate, _: Current
 
 
 @router.delete("/{job_id}", status_code=204)
-async def delete_job(job_id: uuid.UUID, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_job(
+    job_id: uuid.UUID,
+    _: DeleteJob,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         await JobCardService(session).delete(job_id)
     except ValueError as e:

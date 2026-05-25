@@ -6,14 +6,20 @@ from app.core.database import get_db
 from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerListItem
 from app.schemas.base import PaginatedResponse
 from app.services.customer_service import CustomerService
-from app.api.v1.dependencies.auth import CurrentUser
+from app.api.v1.dependencies.auth import CurrentUser, require_permission
+from app.models.user import User
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
+
+ViewCustomer   = Annotated[User, Depends(require_permission("customers.view"))]
+CreateCustomer = Annotated[User, Depends(require_permission("customers.create"))]
+EditCustomer   = Annotated[User, Depends(require_permission("customers.edit"))]
+DeleteCustomer = Annotated[User, Depends(require_permission("customers.delete"))]
 
 
 @router.get("", response_model=PaginatedResponse[CustomerListItem])
 async def list_customers(
-    _: CurrentUser,
+    _: ViewCustomer,
     session: Annotated[AsyncSession, Depends(get_db)],
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -23,7 +29,11 @@ async def list_customers(
 
 
 @router.post("", response_model=CustomerResponse, status_code=201)
-async def create_customer(data: CustomerCreate, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def create_customer(
+    data: CustomerCreate,
+    _: CreateCustomer,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await CustomerService(session).create(data)
     except ValueError as e:
@@ -31,7 +41,11 @@ async def create_customer(data: CustomerCreate, _: CurrentUser, session: Annotat
 
 
 @router.get("/{customer_id}", response_model=CustomerResponse)
-async def get_customer(customer_id: uuid.UUID, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def get_customer(
+    customer_id: uuid.UUID,
+    _: ViewCustomer,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await CustomerService(session).get(customer_id)
     except ValueError as e:
@@ -39,7 +53,12 @@ async def get_customer(customer_id: uuid.UUID, _: CurrentUser, session: Annotate
 
 
 @router.patch("/{customer_id}", response_model=CustomerResponse)
-async def update_customer(customer_id: uuid.UUID, data: CustomerUpdate, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def update_customer(
+    customer_id: uuid.UUID,
+    data: CustomerUpdate,
+    _: EditCustomer,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         return await CustomerService(session).update(customer_id, data)
     except ValueError as e:
@@ -47,7 +66,11 @@ async def update_customer(customer_id: uuid.UUID, data: CustomerUpdate, _: Curre
 
 
 @router.delete("/{customer_id}", status_code=204)
-async def delete_customer(customer_id: uuid.UUID, _: CurrentUser, session: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_customer(
+    customer_id: uuid.UUID,
+    _: DeleteCustomer,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
     try:
         await CustomerService(session).delete(customer_id)
     except ValueError as e:

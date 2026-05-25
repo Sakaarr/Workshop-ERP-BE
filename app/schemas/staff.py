@@ -19,6 +19,12 @@ class StaffUpdate(APIBase):
     is_active: bool | None = None
 
 
+class ProfileUpdate(APIBase):
+    full_name: str | None = None
+    phone: str | None = None
+    avatar_url: str | None = None
+
+
 class StaffResponse(APIBase):
     id: uuid.UUID
     full_name: str

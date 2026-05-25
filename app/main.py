@@ -1,21 +1,19 @@
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-
 from app.core.config import settings
-from app.core.logging import configure_logging, logger
 from app.api.v1.router import api_router
-
+from app.middleware.activity_middleware import ActivityLogMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from app.core.logging import configure_logging, logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging()
     print(f"Starting Auto Garden API v{settings.APP_VERSION}")
     yield
-    print("Shutting down Auto Garden API")
+    print("👋 Shutting down...")
 
 
 def create_app() -> FastAPI:
@@ -37,15 +35,16 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.add_middleware(ActivityLogMiddleware)
     if settings.is_production:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=["autogarden.com.np", "*.autogarden.com.np"])
 
-    # ── Routes ────────────────────────────────────────
+
     app.include_router(api_router)
 
     @app.get("/health", tags=["Health"])
-    async def health_check() -> dict:
-        return {"status": "ok", "version": settings.APP_VERSION, "service": settings.APP_NAME}
+    async def health():
+        return {"status": "ok", "version": settings.APP_VERSION}
 
     return app
 
