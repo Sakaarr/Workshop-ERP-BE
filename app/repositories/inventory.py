@@ -18,7 +18,7 @@ class InventoryRepository(BaseRepository[InventoryItem]):
         )
         return await self.list(skip=skip, limit=limit, filters=[condition])
 
-    async def get_low_stock(self) -> list[InventoryItem]:
+    async def get_low_stock(self) -> List[InventoryItem]:
         from sqlalchemy import text
         q = (
             select(InventoryItem)

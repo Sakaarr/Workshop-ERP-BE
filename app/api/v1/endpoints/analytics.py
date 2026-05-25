@@ -5,7 +5,9 @@ from app.core.database import get_db
 from app.schemas.analytics import DashboardStats, RevenueChartPoint, JobStatusChartPoint, TopCustomer
 from app.services.analytics_service import AnalyticsService
 from app.api.v1.dependencies.auth import CurrentUser
-
+from app.schemas.analytics import DashboardStats, RevenueChartPoint, JobStatusChartPoint, TopCustomer
+from app.schemas.base import APIBase
+from decimal import Decimal
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 
@@ -35,3 +37,48 @@ async def top_customers(
     limit: int = Query(default=5, ge=1, le=20),
 ):
     return await AnalyticsService(session).get_top_customers(limit)
+
+
+class SupplierPartStat(APIBase):
+    supplier_id: str
+    supplier_name: str
+    parts_count: int
+    total_stock_value: Decimal
+
+
+@router.get("/supplier-parts", response_model=list[SupplierPartStat])
+async def supplier_parts_stats(
+    _: CurrentUser,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    from sqlalchemy import select, func
+    from app.models.inventory import InventoryItem, Supplier
+
+    q = (
+        select(
+            Supplier.id,
+            Supplier.name,
+            func.count(InventoryItem.id).label("parts_count"),
+            func.coalesce(
+                func.sum(InventoryItem.quantity * InventoryItem.cost_price), 0
+            ).label("total_stock_value"),
+        )
+        .join(InventoryItem, InventoryItem.supplier_id == Supplier.id)
+        .where(
+            Supplier.deleted_at.is_(None),
+            InventoryItem.deleted_at.is_(None),
+        )
+        .group_by(Supplier.id, Supplier.name)
+        .order_by(func.count(InventoryItem.id).desc())
+        .limit(10)
+    )
+    rows = (await session.execute(q)).all()
+    return [
+        SupplierPartStat(
+            supplier_id=str(r.id),
+            supplier_name=r.name,
+            parts_count=r.parts_count,
+            total_stock_value=Decimal(str(r.total_stock_value)),
+        )
+        for r in rows
+    ]

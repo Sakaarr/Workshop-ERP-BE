@@ -34,6 +34,7 @@ class SupplierResponse(APIBase):
     pan_vat: str | None
     notes: str | None
     created_at: datetime
+    parts_count: int = 0
 
 
 class InventoryItemCreate(APIBase):
@@ -83,10 +84,11 @@ class InventoryItemResponse(APIBase):
     created_at: datetime
     updated_at: datetime
     supplier_name: str | None = None
+    supplier_phone: str | None = None
 
 
 class StockAdjustment(APIBase):
-    quantity_change: int        # positive = add, negative = remove
+    quantity_change: int
     reason: str
     reference: str | None = None
 
@@ -102,4 +104,5 @@ class InventoryListItem(APIBase):
     selling_price: Decimal
     cost_price: Decimal
     is_low_stock: bool = False
+    supplier_id: uuid.UUID | None = None
     supplier_name: str | None = None

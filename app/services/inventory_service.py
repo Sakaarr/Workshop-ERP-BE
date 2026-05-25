@@ -1,5 +1,7 @@
 import uuid
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.inventory import InventoryItem, Supplier
 from app.repositories.inventory import InventoryRepository, SupplierRepository
 from app.schemas.inventory import (
     InventoryItemCreate, InventoryItemUpdate, InventoryItemResponse,
@@ -16,14 +18,7 @@ class InventoryService:
         self.repo = InventoryRepository(session)
         self.supplier_repo = SupplierRepository(session)
 
-    async def list(
-        self,
-        page: int,
-        page_size: int,
-        search: str | None,
-        category: str | None,
-        low_stock_only: bool = False,
-    ) -> PaginatedResponse[InventoryListItem]:
+    async def list(self, page, page_size, search, category, low_stock_only=False) -> PaginatedResponse[InventoryListItem]:
         skip = (page - 1) * page_size
         if low_stock_only:
             items = await self.repo.get_low_stock()
@@ -43,28 +38,21 @@ class InventoryService:
             li = InventoryListItem.model_validate(item)
             li.is_low_stock = item.is_low_stock
             if item.supplier_id:
-                supplier = await self.session.get(
-                    __import__("app.models.inventory", fromlist=["Supplier"]).Supplier,
-                    item.supplier_id,
-                )
+                supplier = await self.session.get(Supplier, item.supplier_id)
                 if supplier:
                     li.supplier_name = supplier.name
             enriched.append(li)
-
-        return PaginatedResponse(
-            items=enriched, total=total, page=page,
-            page_size=page_size, pages=max(1, -(-total // page_size)),
-        )
+        return PaginatedResponse(items=enriched, total=total, page=page, page_size=page_size, pages=max(1, -(-total // page_size)))
 
     async def get(self, item_id: uuid.UUID) -> InventoryItemResponse:
         item = await self.repo.get_or_raise(item_id)
         result = InventoryItemResponse.model_validate(item)
         result.is_low_stock = item.is_low_stock
         if item.supplier_id:
-            from app.models.inventory import Supplier
             supplier = await self.session.get(Supplier, item.supplier_id)
             if supplier:
                 result.supplier_name = supplier.name
+                result.supplier_phone = supplier.phone
         return result
 
     async def create(self, data: InventoryItemCreate) -> InventoryItemResponse:
@@ -89,29 +77,51 @@ class InventoryService:
 
     async def get_low_stock(self) -> List[InventoryListItem]:
         items = await self.repo.get_low_stock()
-        return [InventoryListItem.model_validate(i) for i in items]
+        enriched = []
+        for item in items:
+            li = InventoryListItem.model_validate(item)
+            li.is_low_stock = item.is_low_stock
+            if item.supplier_id:
+                supplier = await self.session.get(Supplier, item.supplier_id)
+                if supplier:
+                    li.supplier_name = supplier.name
+            enriched.append(li)
+        return enriched
 
-    # ── Supplier methods ──────────────────────────────────
-    async def list_suppliers(self, page: int, page_size: int, search: str | None) -> PaginatedResponse[SupplierResponse]:
+    async def list_suppliers(self, page, page_size, search) -> PaginatedResponse[SupplierResponse]:
         skip = (page - 1) * page_size
         if search and search.strip():
             items, total = await self.supplier_repo.search(search.strip(), skip=skip, limit=page_size)
         else:
             items, total = await self.supplier_repo.list(skip=skip, limit=page_size)
-        return PaginatedResponse(
-            items=[SupplierResponse.model_validate(s) for s in items],
-            total=total, page=page, page_size=page_size,
-            pages=max(1, -(-total // page_size)),
-        )
+
+        enriched = []
+        for s in items:
+            resp = SupplierResponse.model_validate(s)
+            q = select(func.count()).select_from(InventoryItem).where(
+                InventoryItem.supplier_id == s.id,
+                InventoryItem.deleted_at.is_(None),
+            )
+            resp.parts_count = (await self.session.execute(q)).scalar_one()
+            enriched.append(resp)
+        return PaginatedResponse(items=enriched, total=total, page=page, page_size=page_size, pages=max(1, -(-total // page_size)))
 
     async def create_supplier(self, data: SupplierCreate) -> SupplierResponse:
         s = await self.supplier_repo.create(**data.model_dump())
-        return SupplierResponse.model_validate(s)
+        result = SupplierResponse.model_validate(s)
+        result.parts_count = 0
+        return result
 
     async def update_supplier(self, supplier_id: uuid.UUID, data: SupplierUpdate) -> SupplierResponse:
         s = await self.supplier_repo.get_or_raise(supplier_id)
         updated = await self.supplier_repo.update(s, **data.model_dump(exclude_none=True))
-        return SupplierResponse.model_validate(updated)
+        result = SupplierResponse.model_validate(updated)
+        q = select(func.count()).select_from(InventoryItem).where(
+            InventoryItem.supplier_id == supplier_id,
+            InventoryItem.deleted_at.is_(None),
+        )
+        result.parts_count = (await self.session.execute(q)).scalar_one()
+        return result
 
     async def delete_supplier(self, supplier_id: uuid.UUID) -> None:
         s = await self.supplier_repo.get_or_raise(supplier_id)
