@@ -22,3 +22,7 @@ class PaginatedResponse[T](APIBase):
     page: int
     page_size: int
     pages: int
+
+
+class BulkDeleteRequest(APIBase):
+    ids: list[uuid.UUID]

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.schemas.inventory import SupplierCreate, SupplierUpdate, SupplierResponse
-from app.schemas.base import PaginatedResponse
+from app.schemas.base import PaginatedResponse, BulkDeleteRequest
 from app.services.inventory_service import InventoryService
 from app.api.v1.dependencies.auth import CurrentUser
 
@@ -69,3 +69,12 @@ async def delete_supplier(
         await InventoryService(session).delete_supplier(supplier_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_suppliers(
+    data: BulkDeleteRequest,
+    _: CurrentUser,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    await InventoryService(session).bulk_delete_suppliers(data.ids)

@@ -126,3 +126,13 @@ class InventoryService:
     async def delete_supplier(self, supplier_id: uuid.UUID) -> None:
         s = await self.supplier_repo.get_or_raise(supplier_id)
         await self.supplier_repo.soft_delete(s)
+
+    async def bulk_delete_items(self, ids: List[uuid.UUID]) -> None:
+        for item_id in ids:
+            item = await self.repo.get_or_raise(item_id)
+            await self.repo.soft_delete(item)
+
+    async def bulk_delete_suppliers(self, ids: List[uuid.UUID]) -> None:
+        for supplier_id in ids:
+            supplier = await self.supplier_repo.get_or_raise(supplier_id)
+            await self.supplier_repo.soft_delete(supplier)

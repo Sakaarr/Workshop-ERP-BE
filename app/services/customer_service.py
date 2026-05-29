@@ -6,7 +6,7 @@ from app.models.vehicle import Vehicle
 from app.repositories.customer import CustomerRepository
 from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerListItem
 from app.schemas.base import PaginatedResponse
-
+from typing import List
 
 class CustomerService:
     def __init__(self, session: AsyncSession) -> None:
@@ -63,3 +63,8 @@ class CustomerService:
     async def delete(self, id: uuid.UUID) -> None:
         c = await self.repo.get_or_raise(id)
         await self.repo.soft_delete(c)
+
+    async def bulk_delete(self, ids: List[uuid.UUID]) -> None:
+        for customer_id in ids:
+            customer = await self.repo.get_or_raise(customer_id)
+            await self.repo.soft_delete(customer)

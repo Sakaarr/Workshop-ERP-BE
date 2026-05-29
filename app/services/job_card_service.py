@@ -8,7 +8,7 @@ from app.models.user import User
 from app.repositories.job_card import JobCardRepository
 from app.schemas.job_card import JobCardCreate, JobCardUpdate, JobCardResponse, JobCardListItem, JobCardStatusUpdate
 from app.schemas.base import PaginatedResponse
-
+from typing import List
 
 class JobCardService:
     def __init__(self, session: AsyncSession) -> None:
@@ -77,3 +77,8 @@ class JobCardService:
     async def delete(self, id: uuid.UUID) -> None:
         j = await self.repo.get_or_raise(id)
         await self.repo.soft_delete(j)
+
+    async def bulk_delete(self, ids: List[uuid.UUID]) -> None:
+        for job_id in ids:
+            job = await self.repo.get_or_raise(job_id)
+            await self.repo.soft_delete(job)

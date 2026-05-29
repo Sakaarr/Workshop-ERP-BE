@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleResponse, VehicleWithCustomer
-from app.schemas.base import PaginatedResponse
+from app.schemas.base import PaginatedResponse, BulkDeleteRequest
 from app.services.vehicle_service import VehicleService
 from app.api.v1.dependencies.auth import require_permission
 from app.models.user import User
@@ -76,6 +76,15 @@ async def delete_vehicle(
         await VehicleService(session).delete(vehicle_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_vehicles(
+    data: BulkDeleteRequest,
+    _: DeleteVehicle,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    await VehicleService(session).bulk_delete(data.ids)
 
 
 @router.get("/by-customer/{customer_id}", response_model=list[VehicleResponse])

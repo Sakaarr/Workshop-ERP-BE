@@ -8,7 +8,7 @@ from app.schemas.inventory import (
     InventoryListItem, StockAdjustment,
     SupplierCreate, SupplierUpdate, SupplierResponse,
 )
-from app.schemas.base import PaginatedResponse
+from app.schemas.base import PaginatedResponse, BulkDeleteRequest
 from app.services.inventory_service import InventoryService
 from app.api.v1.dependencies.auth import require_permission
 from app.models.user import User
@@ -102,3 +102,12 @@ async def delete_item(
         await InventoryService(session).delete(item_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_items(
+    data: BulkDeleteRequest,
+    _: DeleteInv,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    await InventoryService(session).bulk_delete_items(data.ids)

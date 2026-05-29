@@ -10,10 +10,11 @@ from app.schemas.job_card import (
     JobCardCreate, JobCardUpdate, JobCardResponse,
     JobCardListItem, JobCardStatusUpdate,
 )
-from app.schemas.base import PaginatedResponse
+from app.schemas.base import PaginatedResponse, BulkDeleteRequest
 from app.services.job_card_service import JobCardService
 from app.api.v1.dependencies.auth import require_permission, CurrentUser
 from app.schemas.staff import StaffResponse
+from app.services.email_service import send_job_card_created, send_job_status_changed
 
 router = APIRouter(prefix="/job-cards", tags=["Job Cards"])
 
@@ -73,7 +74,31 @@ async def create_job(
     session: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await JobCardService(session).create(data)
+        job = await JobCardService(session).create(data)
+
+        # Fire email notification
+        from app.models.customer import Customer
+        from app.models.vehicle import Vehicle
+        from app.models.user import User as UserModel
+        import asyncio
+
+        customer = await session.get(Customer, data.customer_id)
+        vehicle = await session.get(Vehicle, data.vehicle_id)
+        assigned_user = await session.get(UserModel, data.assigned_to) if data.assigned_to else None
+
+        if customer and customer.email:
+            asyncio.create_task(send_job_card_created(
+                customer_email=customer.email,
+                customer_name=customer.name,
+                job_number=job.job_number,
+                vehicle_plate=vehicle.plate_number if vehicle else "",
+                vehicle_name=f"{vehicle.brand} {vehicle.model}" if vehicle else "",
+                complaint=data.complaint,
+                odometer_in=data.odometer_in,
+                assigned_to=assigned_user.full_name if assigned_user else None,
+            ))
+
+        return job
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -111,9 +136,28 @@ async def update_status(
     session: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await JobCardService(session).update_status(job_id, data)
+        job = await JobCardService(session).update_status(job_id, data)
+
+        from app.models.customer import Customer
+        from app.models.vehicle import Vehicle
+        import asyncio
+
+        customer = await session.get(Customer, job.customer_id)
+        vehicle = await session.get(Vehicle, job.vehicle_id)
+
+        if customer and customer.email:
+            asyncio.create_task(send_job_status_changed(
+                customer_email=customer.email,
+                job_number=job.job_number,
+                vehicle_plate=vehicle.plate_number if vehicle else "",
+                new_status=data.status.value,
+                notes=data.notes,
+            ))
+
+        return job
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
 
 
 @router.delete("/{job_id}", status_code=204)
@@ -126,3 +170,12 @@ async def delete_job(
         await JobCardService(session).delete(job_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_jobs(
+    data: BulkDeleteRequest,
+    _: DeleteJob,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    await JobCardService(session).bulk_delete(data.ids)

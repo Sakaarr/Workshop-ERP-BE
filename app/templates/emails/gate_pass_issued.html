@@ -1,0 +1,36 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<div class="greeting">Gate Pass Issued 🚗</div>
+<div class="subtitle">Your vehicle is cleared for exit. Show this pass to the security guard.</div>
+
+<div class="code-box">
+  <div style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;letter-spacing:0.1em;text-transform:uppercase;">Verification Code</div>
+  <div class="code-text">{{ verification_code }}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-item">
+    <div class="card-label">Customer</div>
+    <div class="card-value">{{ customer_name }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Vehicle</div>
+    <div class="card-value">{{ vehicle_plate }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Vehicle Model</div>
+    <div class="card-value">{{ vehicle_name }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Invoice</div>
+    <div class="card-value" style="font-family:monospace;">{{ invoice_number }}</div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#22c55e;background:#f0fdf4;">
+  <div class="card-label" style="color:#16a34a;">Payment Cleared</div>
+  <div class="card-value" style="color:#15803d;">NPR {{ total_amount }}</div>
+</div>
+
+<p style="font-size:13px;color:#71717a;margin-top:16px;">⚠️ This gate pass is valid for <strong>one exit only</strong>. Please present it to the security guard at the gate.</p>
+{% endblock %}

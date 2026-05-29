@@ -9,6 +9,7 @@ from app.schemas.daybook import (
     DayBookEntryResponse, DayBookSummary,
 )
 from app.schemas.base import PaginatedResponse
+from typing import List
 
 
 class DayBookService:
@@ -74,6 +75,11 @@ class DayBookService:
     async def delete(self, entry_id: uuid.UUID) -> None:
         e = await self.repo.get_or_raise(entry_id)
         await self.repo.soft_delete(e)
+
+    async def bulk_delete(self, ids: List[uuid.UUID]) -> None:
+        for entry_id in ids:
+            entry = await self.repo.get_or_raise(entry_id)
+            await self.repo.soft_delete(entry)
 
     async def _enrich(self, entry) -> DayBookEntryResponse:
         result = DayBookEntryResponse.model_validate(entry)

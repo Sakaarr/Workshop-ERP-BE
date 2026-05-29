@@ -6,7 +6,6 @@ from app.models.invoice import PaymentStatus, PaymentMethod
 
 
 class InvoiceCreate(APIBase):
-    job_card_id: uuid.UUID
     customer_id: uuid.UUID
     discount_amount: Decimal = Decimal("0.00")
     discount_reason: str | None = None
@@ -58,6 +57,7 @@ class PaymentRecord(APIBase):
 class InvoiceListItem(APIBase):
     id: uuid.UUID
     invoice_number: str
+    job_card_id: uuid.UUID
     total_amount: Decimal
     paid_amount: Decimal
     payment_status: PaymentStatus

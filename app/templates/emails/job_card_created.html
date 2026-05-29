@@ -1,0 +1,49 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<div class="greeting">New Job Card Created 🔧</div>
+<div class="subtitle">A new service job has been opened for your vehicle.</div>
+
+<div class="card">
+  <div class="card-label">Job Card Number</div>
+  <div class="card-value" style="font-family:monospace;font-size:20px;color:#f59e0b;">{{ job_number }}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-item">
+    <div class="card-label">Customer</div>
+    <div class="card-value">{{ customer_name }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Vehicle</div>
+    <div class="card-value">{{ vehicle_plate }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Vehicle Model</div>
+    <div class="card-value">{{ vehicle_name }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Odometer In</div>
+    <div class="card-value">{{ odometer_in }} km</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-label">Complaint / Issue Reported</div>
+  <div class="card-value" style="font-weight:400;font-size:14px;color:#52525b;margin-top:6px;">{{ complaint }}</div>
+</div>
+
+<div class="card">
+  <div class="card-label">Status</div>
+  <span class="badge badge-amber">Waiting</span>
+</div>
+
+{% if assigned_to %}
+<div class="card">
+  <div class="card-label">Assigned Mechanic</div>
+  <div class="card-value">{{ assigned_to }}</div>
+</div>
+{% endif %}
+
+<div class="divider"></div>
+<p style="font-size:13px;color:#71717a;">We will notify you as the service progresses. For any queries, call us at <strong>{{ business_phone }}</strong>.</p>
+{% endblock %}

@@ -59,3 +59,8 @@ class VehicleService:
     async def delete(self, id: uuid.UUID) -> None:
         v = await self.repo.get_or_raise(id)
         await self.repo.soft_delete(v)
+
+    async def bulk_delete(self, ids: List[uuid.UUID]) -> None:
+        for vehicle_id in ids:
+            vehicle = await self.repo.get_or_raise(vehicle_id)
+            await self.repo.soft_delete(vehicle)

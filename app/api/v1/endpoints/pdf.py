@@ -4,11 +4,14 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from app.core.database import get_db
 from app.models.invoice import Invoice, GatePass
 from app.models.job_card import JobCard
 from app.models.customer import Customer
 from app.models.vehicle import Vehicle
+from app.models.inventory import JobCardPart
 from app.services.pdf_service import generate_invoice_pdf, generate_gate_pass_pdf, generate_job_card_pdf
 from app.api.v1.dependencies.auth import CurrentUser
 
@@ -25,7 +28,12 @@ async def download_invoice(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
-    job = await session.get(JobCard, invoice.job_card_id)
+    job_query = (
+        select(JobCard)
+        .where(JobCard.id == invoice.job_card_id, JobCard.deleted_at.is_(None))
+        .options(selectinload(JobCard.parts_used).selectinload(JobCardPart.item))
+    )
+    job = (await session.execute(job_query)).scalar_one_or_none()
     customer = await session.get(Customer, invoice.customer_id)
     vehicle = await session.get(Vehicle, job.vehicle_id) if job else None
 
@@ -82,7 +90,11 @@ async def download_gate_pass(
         raise HTTPException(status_code=404, detail="Gate pass not found")
 
     invoice = await session.get(Invoice, gp.invoice_id)
-    job = await session.get(JobCard, gp.job_card_id)
+    job_query = (
+        select(JobCard)
+        .where(JobCard.id == gp.job_card_id, JobCard.deleted_at.is_(None))
+    )
+    job = (await session.execute(job_query)).scalar_one_or_none()
     customer = await session.get(Customer, invoice.customer_id) if invoice else None
     vehicle = await session.get(Vehicle, job.vehicle_id) if job else None
 
@@ -114,7 +126,12 @@ async def download_job_card(
     _: CurrentUser,
     session: Annotated[AsyncSession, Depends(get_db)],
 ):
-    job = await session.get(JobCard, job_card_id)
+    job_query = (
+        select(JobCard)
+        .where(JobCard.id == job_card_id, JobCard.deleted_at.is_(None))
+        .options(selectinload(JobCard.parts_used).selectinload(JobCardPart.item))
+    )
+    job = (await session.execute(job_query)).scalar_one_or_none()
     if not job:
         raise HTTPException(status_code=404, detail="Job card not found")
 

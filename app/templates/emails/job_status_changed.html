@@ -1,0 +1,46 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<div class="greeting">Job Update: {{ status_label }} ✅</div>
+<div class="subtitle">Your vehicle service status has been updated.</div>
+
+<div class="card">
+  <div class="card-label">Job Card</div>
+  <div class="card-value" style="font-family:monospace;color:#f59e0b;">{{ job_number }}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-item">
+    <div class="card-label">Vehicle</div>
+    <div class="card-value">{{ vehicle_plate }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">New Status</div>
+    <span class="badge {{ status_badge_class }}">{{ status_label }}</span>
+  </div>
+</div>
+
+{% if status == "ready" %}
+<div class="card" style="border-color:#22c55e;background:#f0fdf4;">
+  <div class="card-label" style="color:#16a34a;">🎉 Vehicle Ready for Pickup</div>
+  <div class="card-value" style="color:#15803d;font-size:14px;font-weight:400;margin-top:6px;">
+    Your vehicle has been serviced and is ready for collection. Please bring this notification and your ID.
+  </div>
+</div>
+{% elif status == "waiting_parts" %}
+<div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+  <div class="card-label" style="color:#b45309;">⏳ Awaiting Parts</div>
+  <div class="card-value" style="color:#92400e;font-size:14px;font-weight:400;margin-top:6px;">
+    We are waiting for spare parts. We'll update you once they arrive and work resumes.
+  </div>
+</div>
+{% endif %}
+
+{% if notes %}
+<div class="card">
+  <div class="card-label">Technician Notes</div>
+  <div class="card-value" style="font-weight:400;font-size:14px;color:#52525b;margin-top:4px;">{{ notes }}</div>
+</div>
+{% endif %}
+
+<p style="font-size:13px;color:#71717a;margin-top:16px;">Questions? Call us at <strong>{{ business_phone }}</strong></p>
+{% endblock %}

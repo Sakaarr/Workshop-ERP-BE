@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.schemas.customer import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerListItem
-from app.schemas.base import PaginatedResponse
+from app.schemas.base import PaginatedResponse, BulkDeleteRequest
 from app.services.customer_service import CustomerService
 from app.api.v1.dependencies.auth import CurrentUser, require_permission
 from app.models.user import User
@@ -75,3 +75,12 @@ async def delete_customer(
         await CustomerService(session).delete(customer_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_customers(
+    data: BulkDeleteRequest,
+    _: DeleteCustomer,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    await CustomerService(session).bulk_delete(data.ids)

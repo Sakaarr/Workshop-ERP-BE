@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date
 from app.core.database import get_db
 from app.schemas.daybook import DayBookEntryCreate, DayBookEntryResponse, DayBookSummary
-from app.schemas.base import PaginatedResponse
+from app.schemas.base import PaginatedResponse, BulkDeleteRequest
 from app.services.daybook_service import DayBookService
 from app.api.v1.dependencies.auth import CurrentUser
 
@@ -60,3 +60,12 @@ async def delete_entry(
         await DayBookService(session).delete(entry_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/bulk-delete", status_code=204)
+async def bulk_delete_entries(
+    data: BulkDeleteRequest,
+    _: CurrentUser,
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    await DayBookService(session).bulk_delete(data.ids)

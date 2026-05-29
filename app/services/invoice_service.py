@@ -1,10 +1,13 @@
 import uuid
 from decimal import Decimal
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.invoice import Invoice, PaymentStatus
 from app.models.job_card import JobCard
 from app.models.customer import Customer
 from app.models.vehicle import Vehicle
+from app.models.inventory import JobCardPart
 from app.models.user import User
 from app.repositories.invoice import InvoiceRepository
 from app.repositories.job_card import JobCardRepository
@@ -27,7 +30,14 @@ class InvoiceService:
         if existing:
             raise ValueError("Invoice already exists for this job card")
 
-        job = await self.job_repo.get_or_raise(job_card_id)
+        job_query = (
+            select(JobCard)
+            .where(JobCard.id == job_card_id, JobCard.deleted_at.is_(None))
+            .options(selectinload(JobCard.parts_used).selectinload(JobCardPart.item))
+        )
+        job = (await self.session.execute(job_query)).scalar_one_or_none()
+        if not job:
+            raise ValueError(f"JobCard with id={job_card_id} not found")
 
         # Calculate parts subtotal
         parts_total = Decimal("0.00")

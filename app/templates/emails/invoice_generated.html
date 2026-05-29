@@ -1,0 +1,56 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<div class="greeting">Invoice Ready 🧾</div>
+<div class="subtitle">Your service invoice has been generated.</div>
+
+<div class="card">
+  <div class="card-label">Invoice Number</div>
+  <div class="card-value" style="font-family:monospace;color:#f59e0b;">{{ invoice_number }}</div>
+</div>
+
+<div class="info-grid">
+  <div class="info-item">
+    <div class="card-label">Vehicle</div>
+    <div class="card-value">{{ vehicle_plate }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Job Card</div>
+    <div class="card-value" style="font-family:monospace;">{{ job_number }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <table style="width:100%;border-collapse:collapse;">
+    <tr style="border-bottom:1px solid #e4e4e7;">
+      <td style="padding:8px 0;font-size:13px;color:#71717a;">Subtotal</td>
+      <td style="padding:8px 0;font-size:13px;text-align:right;">NPR {{ subtotal }}</td>
+    </tr>
+    {% if discount_amount != "0.00" %}
+    <tr style="border-bottom:1px solid #e4e4e7;">
+      <td style="padding:8px 0;font-size:13px;color:#71717a;">Discount</td>
+      <td style="padding:8px 0;font-size:13px;color:#16a34a;text-align:right;">- NPR {{ discount_amount }}</td>
+    </tr>
+    {% endif %}
+    <tr style="border-bottom:1px solid #e4e4e7;">
+      <td style="padding:8px 0;font-size:13px;color:#71717a;">VAT ({{ tax_rate }}%)</td>
+      <td style="padding:8px 0;font-size:13px;text-align:right;">NPR {{ tax_amount }}</td>
+    </tr>
+    <tr>
+      <td style="padding:12px 0;font-size:16px;font-weight:700;">Total</td>
+      <td style="padding:12px 0;font-size:18px;font-weight:700;text-align:right;color:#f59e0b;">NPR {{ total_amount }}</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="card-label">Payment Status</div>
+  <span class="badge {% if payment_status == 'paid' %}badge-green{% elif payment_status == 'partial' %}badge-blue{% else %}badge-amber{% endif %}">
+    {{ payment_status | upper }}
+  </span>
+  {% if balance_due != "0.00" %}
+  <div style="margin-top:8px;font-size:13px;color:#dc2626;font-weight:600;">Balance Due: NPR {{ balance_due }}</div>
+  {% endif %}
+</div>
+
+<p style="font-size:13px;color:#71717a;margin-top:16px;">Please bring this email when collecting your vehicle. For payments, call <strong>{{ business_phone }}</strong></p>
+{% endblock %}

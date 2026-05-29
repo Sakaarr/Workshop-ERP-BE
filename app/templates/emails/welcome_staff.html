@@ -1,0 +1,35 @@
+{% extends "emails/base.html" %}
+{% block content %}
+<div class="greeting">Welcome to Auto Garden! 👋</div>
+<div class="subtitle">Your staff account has been created.</div>
+
+<div class="info-grid">
+  <div class="info-item">
+    <div class="card-label">Your Name</div>
+    <div class="card-value">{{ full_name }}</div>
+  </div>
+  <div class="info-item">
+    <div class="card-label">Role</div>
+    <div class="card-value" style="text-transform:capitalize;">{{ role }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-label">Login Email</div>
+  <div class="card-value" style="font-family:monospace;">{{ email }}</div>
+</div>
+
+<div class="card">
+  <div class="card-label">Temporary Password</div>
+  <div class="card-value" style="font-family:monospace;font-size:18px;letter-spacing:0.1em;color:#f59e0b;">{{ temp_password }}</div>
+</div>
+
+<div class="card" style="border-color:#f59e0b;background:#fffbeb;">
+  <div class="card-label" style="color:#b45309;">⚠️ Security Notice</div>
+  <div class="card-value" style="font-weight:400;font-size:13px;color:#78350f;margin-top:4px;">
+    Please change your password immediately after your first login. Do not share your credentials with anyone.
+  </div>
+</div>
+
+<a href="{{ login_url }}" class="btn">Login to Dashboard →</a>
+{% endblock %}

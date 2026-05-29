@@ -7,6 +7,7 @@ from app.schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceResponse, I
 from app.schemas.base import PaginatedResponse
 from app.services.invoice_service import InvoiceService
 from app.api.v1.dependencies.auth import CurrentUser
+from app.services.email_service import send_invoice_generated
 
 router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
@@ -30,7 +31,33 @@ async def create_invoice(
     session: Annotated[AsyncSession, Depends(get_db)],
 ):
     try:
-        return await InvoiceService(session).create_from_job(job_card_id, data)
+        inv = await InvoiceService(session).create_from_job(job_card_id, data)
+
+        from app.models.customer import Customer
+        from app.models.job_card import JobCard
+        from app.models.vehicle import Vehicle
+        import asyncio
+
+        customer = await session.get(Customer, data.customer_id)
+        job = await session.get(JobCard, job_card_id)
+        vehicle = await session.get(Vehicle, job.vehicle_id) if job else None
+
+        if customer and customer.email:
+            asyncio.create_task(send_invoice_generated(
+                customer_email=customer.email,
+                invoice_number=inv.invoice_number,
+                job_number=inv.job_number or "",
+                vehicle_plate=inv.vehicle_plate or "",
+                subtotal=str(inv.subtotal),
+                discount_amount=str(inv.discount_amount),
+                tax_rate=str(inv.tax_rate),
+                tax_amount=str(inv.tax_amount),
+                total_amount=str(inv.total_amount),
+                paid_amount=str(inv.paid_amount),
+                payment_status=inv.payment_status,
+            ))
+
+        return inv
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

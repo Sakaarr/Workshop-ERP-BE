@@ -59,6 +59,14 @@ class Settings(BaseSettings):
     BUSINESS_PHONE: str = ""
     BUSINESS_PAN: str = ""
     VAT_RATE: float = 13.0
+    
+    # Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAILS_FROM_EMAIL: str = "noreply@autogarden.com.np"
+    EMAILS_ENABLED: bool = False
 
     @property
     def is_production(self) -> bool:
