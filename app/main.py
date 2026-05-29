@@ -37,7 +37,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(ActivityLogMiddleware)
     if settings.is_production:
-        app.add_middleware(TrustedHostMiddleware, allowed_hosts=["autogarden.com.np", "*.autogarden.com.np"])
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.TRUSTED_HOSTS)
 
 
     app.include_router(api_router)

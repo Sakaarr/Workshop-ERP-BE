@@ -19,10 +19,21 @@ class Settings(BaseSettings):
     ENVIRONMENT: Literal["development", "staging", "production"] = "development"
     SECRET_KEY: str
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
+    TRUSTED_HOSTS: list[str] = ["localhost", "127.0.0.1", "autogarden.com.np", "*.autogarden.com.np"]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, v: str | list) -> list[str]:
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except Exception:
+                return [v]
+        return v
+
+    @field_validator("TRUSTED_HOSTS", mode="before")
+    @classmethod
+    def parse_hosts(cls, v: str | list) -> list[str]:
         if isinstance(v, str):
             try:
                 return json.loads(v)
